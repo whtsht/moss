@@ -5,19 +5,36 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use bootloader::BootInfo;
 use core::panic::PanicInfo;
+use x86_64::VirtAddr;
 
+pub mod error;
 pub mod gdt;
 pub mod interrupts;
 pub mod keyboard;
+pub mod paging;
 pub mod serial;
 pub mod vga_buffer;
 
-pub fn init() {
+use error::Result;
+
+pub fn init(boot_info: &'static BootInfo) -> Result<()> {
     gdt::init();
     interrupts::init_idt();
     unsafe { keyboard::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
+
+    let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
+
+    unsafe { paging::init(physical_memory_offset) };
+
+    let mut mapper = paging::get_mapper()?;
+    let mut allocator = unsafe { paging::BootInfoFrameAllocator::init(&boot_info.memory_map) };
+
+    paging::make_identity_mapping(&mut mapper, &mut allocator, 0xfee00000, 1).unwrap();
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,13 +83,19 @@ pub fn test_panic_handler(info: &PanicInfo) -> ! {
     hlt_loop()
 }
 
+#[cfg(test)]
+use bootloader::entry_point;
+
+#[cfg(test)]
+entry_point!(test_kernel_main);
+
 /// Entry point for `cargo test`
 #[cfg(test)]
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
-    init();
+fn test_kernel_main(boot_info: &'static BootInfo) -> ! {
+    // like before
+    init(boot_info);
     test_main();
-    hlt_loop()
+    hlt_loop();
 }
 
 #[cfg(test)]
