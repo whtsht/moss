@@ -21,6 +21,7 @@ pub mod keyboard;
 pub mod paging;
 pub mod serial;
 pub mod task;
+pub mod terminal;
 pub mod vga_buffer;
 
 use error::Result;

@@ -64,7 +64,7 @@ pub struct Writer {
 }
 
 impl Writer {
-    pub fn write_byte(&mut self, byte: u8) {
+    fn write_byte(&mut self, byte: u8) {
         match byte {
             b'\n' => self.new_line(),
             byte => {
@@ -85,7 +85,7 @@ impl Writer {
         }
     }
 
-    pub fn write_string(&mut self, s: &str) {
+    fn write_string(&mut self, s: &str) {
         for byte in s.bytes() {
             match byte {
                 // printable ASCII byte or newline
@@ -94,6 +94,22 @@ impl Writer {
                 _ => self.write_byte(0xfe),
             }
         }
+    }
+
+    fn backspace(&mut self) {
+        if self.column_position <= 1 {
+            return;
+        }
+
+        let row = BUFFER_HEIGHT - 1;
+
+        let blank = ScreenChar {
+            ascii_character: b' ',
+            color_code: self.color_code,
+        };
+
+        self.buffer.chars[row][self.column_position - 1].write(blank);
+        self.column_position -= 1;
     }
 
     fn new_line(&mut self) {
@@ -116,6 +132,19 @@ impl Writer {
             self.buffer.chars[row][col].write(blank);
         }
     }
+
+    fn clear_screen(&mut self) {
+        let blank = ScreenChar {
+            ascii_character: b' ',
+            color_code: self.color_code,
+        };
+
+        for row in 0..BUFFER_HEIGHT {
+            for col in 0..BUFFER_WIDTH {
+                self.buffer.chars[row][col].write(blank);
+            }
+        }
+    }
 }
 
 impl fmt::Write for Writer {
@@ -123,6 +152,14 @@ impl fmt::Write for Writer {
         self.write_string(s);
         Ok(())
     }
+}
+
+pub fn backspace() {
+    WRITER.lock().backspace();
+}
+
+pub fn clear_screen() {
+    WRITER.lock().clear_screen();
 }
 
 #[macro_export]

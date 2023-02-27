@@ -19,9 +19,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     #[cfg(test)]
     test_main();
 
-    moss::task::add(moss::task::Task::new(dot()));
-    moss::task::add(moss::task::Task::new(world()));
-    moss::task::add(moss::task::Task::new(print_keypresses()));
+    print!(">");
+    let task = moss::task::Task::new(print_keypresses());
+    moss::task::add(task);
 
     moss::task::run();
 }
@@ -37,22 +37,4 @@ fn panic(info: &PanicInfo) -> ! {
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     moss::test_panic_handler(info)
-}
-
-async fn dot() {
-    use x86_64::instructions::interrupts;
-    let mut tmp = 0;
-    loop {
-        let a = interrupts::without_interrupts(|| *moss::interrupts::GLOBAL_COUNTER.lock());
-        if tmp + 10 <= a {
-            print!(".");
-            tmp = a;
-        } else {
-            (async {}).await;
-        }
-    }
-}
-
-async fn world() {
-    println!("world");
 }

@@ -43,7 +43,9 @@ pub fn run_ready_tasks() {
             Poll::Ready(()) => {
                 waker_cache.remove(&task_id);
             }
-            Poll::Pending => {}
+            Poll::Pending => {
+                TASKS.lock().insert(task_id, task);
+            }
         }
     }
 }
@@ -80,7 +82,9 @@ impl TaskWaker {
         }))
     }
 
-    fn wake_task(&self) {}
+    fn wake_task(&self) {
+        self.task_queue.push(self.task_id).expect("task_queue full");
+    }
 }
 
 impl Wake for TaskWaker {

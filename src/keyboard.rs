@@ -1,13 +1,16 @@
-use crate::println;
+use crate::{println, terminal};
 use core::{
     pin::Pin,
     task::{Context, Poll},
 };
 use crossbeam_queue::ArrayQueue;
 use futures_util::stream::Stream;
+use futures_util::task::AtomicWaker;
 use spin::Once;
 
 static SCANCODE_QUEUE: Once<ArrayQueue<u8>> = Once::new();
+
+static WAKER: AtomicWaker = AtomicWaker::new();
 
 pub fn add_scancode(scancode: u8) {
     if let Some(queue) = SCANCODE_QUEUE.get() {
@@ -53,13 +56,8 @@ impl Stream for ScancodeStream {
     }
 }
 
-use futures_util::task::AtomicWaker;
-
-static WAKER: AtomicWaker = AtomicWaker::new();
-
-use crate::print;
 use futures_util::stream::StreamExt;
-use pc_keyboard::{layouts, DecodedKey, HandleControl, Keyboard, ScancodeSet1};
+use pc_keyboard::{layouts, HandleControl, Keyboard, ScancodeSet1};
 
 pub async fn print_keypresses() {
     let mut scancodes = ScancodeStream::new();
@@ -68,10 +66,7 @@ pub async fn print_keypresses() {
     while let Some(scancode) = scancodes.next().await {
         if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
             if let Some(key) = keyboard.process_keyevent(key_event) {
-                match key {
-                    DecodedKey::Unicode(character) => print!("{}", character),
-                    DecodedKey::RawKey(key) => print!("{:?}", key),
-                }
+                terminal::push_key(key);
             }
         }
     }
