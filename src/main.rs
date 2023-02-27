@@ -6,23 +6,25 @@
 
 extern crate alloc;
 
-use alloc::vec;
 use bootloader::{entry_point, BootInfo};
 use core::panic::PanicInfo;
-use moss::{hlt_loop, println};
+use moss::{hlt_loop, keyboard::print_keypresses, println, task::Task};
 
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     moss::init(boot_info).expect("failed to initialize kernel");
 
-    let v = vec![1, 2, 3];
-    println!("Hello World {}", v[2]);
-
     #[cfg(test)]
     test_main();
 
-    hlt_loop();
+    moss::task::add(Task::new(hello()));
+    moss::task::add(Task::new(print_keypresses()));
+    moss::task::run();
+}
+
+async fn hello() {
+    println!("hello");
 }
 
 #[cfg(not(test))]

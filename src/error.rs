@@ -52,6 +52,7 @@ pub enum ErrorKind {
     InvalidEndpointNumber,
     TransferRingNotSet,
     AlreadyAllocated,
+    TaskQueueIsFull,
     NotImplemented,
     Unknown,
 }

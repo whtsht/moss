@@ -19,6 +19,7 @@ pub mod interrupts;
 pub mod keyboard;
 pub mod paging;
 pub mod serial;
+pub mod task;
 pub mod vga_buffer;
 
 use error::Result;
@@ -37,7 +38,7 @@ pub fn init(boot_info: &'static BootInfo) -> Result<()> {
     allocator::init_heap(&mut *mapper, &mut allocator)?;
 
     interrupts::init_idt();
-    unsafe { keyboard::PICS.lock().initialize() };
+    unsafe { interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 
     Ok(())
