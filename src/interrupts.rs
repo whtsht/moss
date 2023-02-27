@@ -63,7 +63,10 @@ impl InterruptIndex {
     }
 }
 
+pub static GLOBAL_COUNTER: Mutex<u64> = Mutex::new(0);
+
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    *GLOBAL_COUNTER.lock() += 1;
     unsafe {
         PICS.lock()
             .notify_end_of_interrupt(InterruptIndex::Timer.as_u8());

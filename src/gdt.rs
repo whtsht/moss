@@ -36,9 +36,9 @@ static GDT: Lazy<(GlobalDescriptorTable, Selectors)> = Lazy::new(|| {
 });
 
 pub struct Selectors {
-    code_selector: SegmentSelector,
-    stack_selector: SegmentSelector,
-    tss_selector: SegmentSelector,
+    pub code_selector: SegmentSelector,
+    pub stack_selector: SegmentSelector,
+    pub tss_selector: SegmentSelector,
 }
 
 pub fn init() {
@@ -60,4 +60,8 @@ pub fn init() {
 
         load_tss(GDT.1.tss_selector);
     }
+}
+
+pub fn selectors() -> &'static Selectors {
+    &GDT.1
 }
