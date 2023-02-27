@@ -11,3 +11,5 @@ panic = "abort"
 
 [dependencies]
 bootloader = "0.9.23"
+volatile = "0.2.6"
+spin = "0.9.5"
