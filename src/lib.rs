@@ -1,14 +1,18 @@
 #![no_std]
 #![cfg_attr(test, no_main)]
 #![feature(abi_x86_interrupt)]
+#![feature(const_mut_refs)]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
+
+extern crate alloc;
 
 use bootloader::BootInfo;
 use core::panic::PanicInfo;
 use x86_64::VirtAddr;
 
+pub mod allocator;
 pub mod error;
 pub mod gdt;
 pub mod interrupts;
@@ -21,9 +25,6 @@ use error::Result;
 
 pub fn init(boot_info: &'static BootInfo) -> Result<()> {
     gdt::init();
-    interrupts::init_idt();
-    unsafe { keyboard::PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
 
     let physical_memory_offset = VirtAddr::new(boot_info.physical_memory_offset);
 
@@ -33,6 +34,11 @@ pub fn init(boot_info: &'static BootInfo) -> Result<()> {
     let mut allocator = unsafe { paging::BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
     paging::make_identity_mapping(&mut mapper, &mut allocator, 0xfee00000, 1).unwrap();
+    allocator::init_heap(&mut *mapper, &mut allocator)?;
+
+    interrupts::init_idt();
+    unsafe { keyboard::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
 
     Ok(())
 }
