@@ -1,10 +1,12 @@
-use crate::println;
+use crate::fs;
 
 use alloc::string::String;
 use pc_keyboard::DecodedKey;
 use spin::Mutex;
 
 use crate::print;
+
+static _ONLY_HLT: &[u8] = include_bytes!("../onlyhlt");
 
 static TERMINAL: Mutex<Terminal> = Mutex::new(Terminal::new());
 
@@ -56,7 +58,7 @@ impl Terminal {
     pub fn run(&mut self) {
         self.execute();
         self.buffer_clear();
-        print!(">");
+        print!("\n>");
     }
 
     pub fn buffer_clear(&mut self) {
@@ -72,15 +74,68 @@ impl Terminal {
         let command = commands.next().unwrap();
 
         match command {
-            "echo" => {
-                for args in commands {
-                    for c in args.chars() {
-                        print!("{}", c);
-                    }
-                }
-                print!("\n");
-            }
-            _ => println!("command not found: {}", command),
+            "echo" => echo(commands),
+            "touch" => touch(commands),
+            "find" => find(commands),
+            "onlyhlt" => exec(commands),
+            _ => print!("command not found: {}", command),
         }
     }
+}
+
+fn echo<'a>(commands: impl Iterator<Item = &'a str>) {
+    for args in commands {
+        for c in args.chars() {
+            print!("{}", c);
+        }
+    }
+}
+
+fn touch<'a>(mut commands: impl Iterator<Item = &'a str>) {
+    if let Some(name) = commands.next() {
+        fs::create_file(&mut fs::Path::from_str(name)).unwrap();
+    }
+}
+
+fn find<'a>(mut commands: impl Iterator<Item = &'a str>) {
+    match commands.next() {
+        Some(ty) if ty == "file" => {
+            if let Some(fname) = commands.next() {
+                let path = fs::Path::from_str(fname);
+                fs::handle_file(
+                    |file| match file {
+                        Ok(file) => print!("{}", file.name()),
+                        Err(_) => print!("`{}`: No such file", fname),
+                    },
+                    path,
+                )
+            } else {
+                print!("Unspecified file name");
+            }
+        }
+        Some(ty) if ty == "dir" => {
+            if let Some(fname) = commands.next() {
+                let path = fs::Path::from_str(fname);
+                fs::handle_files(
+                    |files| match files {
+                        Ok(files) => {
+                            for (name, _) in files.iter() {
+                                print!("{} ", name);
+                            }
+                        }
+                        Err(_) => print!("`{}`: No such directory", fname),
+                    },
+                    path,
+                )
+            } else {
+                print!("unspecified directory name");
+            }
+        }
+        _ => print!("invalid arguments"),
+    }
+}
+
+fn exec<'a>(mut _commands: impl Iterator<Item = &'a str>) {
+    let f = crate::exec::compile_onlyhlt();
+    f();
 }

@@ -15,6 +15,8 @@ use x86_64::VirtAddr;
 
 pub mod allocator;
 pub mod error;
+pub mod exec;
+pub mod fs;
 pub mod gdt;
 pub mod interrupts;
 pub mod keyboard;
